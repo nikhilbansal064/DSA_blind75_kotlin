@@ -1,10 +1,8 @@
 package blind75
 
 import java.util.*
-import kotlin.NoSuchElementException
 import kotlin.collections.HashMap
 import kotlin.math.max
-import kotlin.math.min
 
 //https://dsa.30dayscoding.com/
 
@@ -900,16 +898,366 @@ fun hasCycle(head: ListNode?): Boolean {
 }
 
 
+/** Trees **/
+fun levelOrder(root: TreeNode?): List<List<Int>> {
+
+    val traversal = mutableListOf<List<Int>>()
+
+    //edge case
+    if (root == null) return traversal
+
+    val queue = LinkedList<TreeNode?>().apply {
+        add(root)
+        add(null)
+    }
+
+    val level = mutableListOf<Int>()
+    while (queue.isNotEmpty()) {
+        val item = queue.pop()
+
+        if (item == null) {
+            // level completed so we need to add it in traversal
+            traversal.add(level.toList())
+            if (queue.isEmpty()) break
+            queue.add(null)
+            level.clear()
+        } else {
+            level.add(item.`val`)
+            item?.left?.let {
+                queue.add(it)
+            }
+            item?.right?.let {
+                queue.add(it)
+            }
+        }
+
+    }
+    return traversal
+}
+
+/**
+ * problem: https://leetcode.com/problems/maximum-depth-of-binary-tree/submissions/1265024123/
+ *
+ * Approach: Recursion in tree
+ *
+ * Time Complexity: O(n) to iterate all nodes
+ * Space Complexity: O(n) in worst case where tree is skewed
+ */
+fun maxDepthOfBT(root: TreeNode?): Int {
+    // base case
+    if (root == null) return 0
+
+    val leftHeight = maxDepthOfBT(root.left)
+    val rightHeight = maxDepthOfBT(root.right)
+
+    return maxOf(leftHeight, rightHeight) + 1
+}
+
+
+/**
+ * Problem: https://leetcode.com/problems/binary-tree-maximum-path-sum/description/?source=submission-noac
+ *
+ * Approach: Recursion
+ * Here maxPathSumHelp() is not returning max path sum rather it returns the longest sub path because that's we want to pass to the parent caller
+ * and we keep track of max path sum in a separate variable
+ *
+ * Note: We are taking maxOf(0, maxPathSumHelp(root.left, maxSum)), instead of actual path Because, if right ot left subpath is -ve we should not take it
+ *
+ * Ref:https://www.youtube.com/watch?v=WszrfSwMz58&list=PLkjdNRgDmcc0Pom5erUBU4ZayeU9AyRRu&index=17&ab_channel=takeUforward
+ */
+fun maxPathSum(root: TreeNode?): Int {
+    val maxSum = mutableListOf<Int>(Int.MIN_VALUE)
+    maxPathSumHelp(root, maxSum)
+    return maxSum.get(0)
+}
+
+fun maxPathSumHelp(root: TreeNode?, maxSum: MutableList<Int>): Int {
+
+    // base case
+    if (root == null) return 0
+
+    // Note: We need to avoid -ve left or right path, if sub path gives -ve I will rather take 0
+    val leftLongestPathSum = maxOf(0, maxPathSumHelp(root.left, maxSum))
+    val rightLongestPathSum = maxOf(0, maxPathSumHelp(root.right, maxSum))
+
+    // Find the max path sum passing through root and update if it is max
+    val path = leftLongestPathSum + rightLongestPathSum + root.`val`
+    maxSum[0] = maxOf(maxSum[0], path)
+
+    // But to the parent we can't pass whole path we need to pass the longest branch
+    return maxOf(leftLongestPathSum, rightLongestPathSum) + root.`val`
+}
+
+
+/**
+ * Problem: https://leetcode.com/problems/same-tree/submissions/1266840605/
+ *
+ * Approach: Recursion
+ *
+ * Ref: https://leetcode.com/problems/same-tree/
+ */
+fun isSameTree(p: TreeNode?, q: TreeNode?): Boolean {
+    //base case
+    if (p == null || q == null) {
+        return p == q
+    }
+
+    return (p.`val` == q.`val` && isSameTree(p.left, q.left) && isSameTree(p.right, q.right))
+}
+
+/**
+ * Problem:
+ * Approach: Recursion
+ * Method returns the ancestor of the p,q or both OR null otherwise
+ * For a node N
+ *  - if its both subtree returns null --> p,q are not present in the tree with root N
+ *  - if its both subtree returns non null --> p,q both are present in the tree with root N, i.e N is ancestor of both p and q
+ *  - if one of the sub tree return non null --> N is one of the ancestor of p or q
+ *
+ *  Note: Please check the reference of path from root to node also to understand this problem
+ *
+ * Ref: https://www.youtube.com/watch?v=_-QHfMDde90&list=PLkjdNRgDmcc0Pom5erUBU4ZayeU9AyRRu&index=27&ab_channel=takeUforward
+ * Ref: https://www.youtube.com/watch?v=fmflMqVOC7k&list=PLkjdNRgDmcc0Pom5erUBU4ZayeU9AyRRu&index=26&ab_channel=takeUforward
+ */
+fun lowestCommonAncestor(root: TreeNode?, p: TreeNode?, q: TreeNode?): TreeNode? {
+    if (root?.`val` == null) return null
+
+    if (root.`val` == p?.`val` || root.`val` == q?.`val`) {
+        return root
+    }
+
+    val fromLeft = lowestCommonAncestor(root.left, p, q)
+    val fromRight = lowestCommonAncestor(root.right, p, q)
+
+    if (fromLeft != null && fromRight != null) {
+        return root
+    }
+
+    return fromLeft ?: fromRight
+}
+
+
+/**
+ * Problem: https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/submissions/1268245820/
+ * Approach: Recursion + BST properties
+ * In BST right subtree > root > left subtree
+ * so If both p and q
+ *  - < root --> go to left sub tree to find ans
+ *  - > root --> go to right sub tree to find ans
+ *  - if one and smaller and one is larger it means root is the common ancestor
+ */
+
+fun lowestCommonAncestorBST(root: TreeNode?, p: TreeNode?, q: TreeNode?): TreeNode? {
+    if (root?.`val` == null || p?.`val` == null || q?.`val` == null) return null
+
+    if (p.`val` < root.`val` && q.`val` < root.`val`) return lowestCommonAncestorBST(root.left, p, q)
+    if (p.`val` > root.`val` && q.`val` > root.`val`) return lowestCommonAncestorBST(root.right, p, q)
+
+    return root
+}
+
+
+/**
+ * Problem: https://leetcode.com/problems/invert-binary-tree/description/
+ */
+fun invertTree(root: TreeNode?): TreeNode? {
+    if (root == null) return root
+    if (root.left == null && root.right == null) return root
+    val temp = root.left
+    root.left = invertTree(root.right)
+    root.right = invertTree(temp)
+    return root
+}
+
+
+/**
+ * Problem: https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/description/
+ * Approach:
+ * 1. first element of preorder is always root
+ * 2. All elements at left of root elements in inorder traversal are part of left sub tree and on right are part of right sub tree.
+ * i.e we can divide inorder array
+ * - Use recursive approach with above pointers
+ *
+ * Ref: https://www.youtube.com/watch?v=aZNaLrVebKQ&ab_channel=takeUforward
+ */
+fun buildTree(preorder: IntArray, inorder: IntArray): TreeNode? {
+    val map = mutableMapOf<Int, Int>()
+    inorder.forEachIndexed { index, i ->
+        map.put(i, index)
+    }
+    val root = build(inorder, 0, inorder.size - 1, preorder, 0, preorder.size  - 1,  map)
+    return root
+}
+
+fun build( inorder: IntArray, ins: Int, ine: Int, preorder: IntArray, ps: Int, pe: Int, map: Map<Int, Int>): TreeNode? {
+    if (ins > ine || ps > pe) return null
+    val root = TreeNode(preorder[ps])
+
+    val rootIndex = map[root.`val`] ?: 0
+    val leftTreeElementsCount = rootIndex - ins
+    val rightTreeElementsCount = ine - rootIndex
+
+    root.left = if (leftTreeElementsCount == 0 )
+        null
+    else
+        build(inorder, ins, rootIndex - 1, preorder, ps + 1, ps + leftTreeElementsCount, map)
+
+    root.right = if (rightTreeElementsCount == 0 )
+        null
+    else
+        build(inorder, rootIndex + 1, ine, preorder, ps + leftTreeElementsCount + 1, pe, map)
+
+    return root
+}
+
+
+/**
+ * Problem: https://leetcode.com/problems/serialize-and-deserialize-binary-tree/description/
+ *
+ * Approach: traverse the tree (BFS or DFS) and use any specific char for null nodes (children of leaf nodes) like #
+ * - Can be done using Level oder or preorder traversal also
+ * We are using level order traversal here
+ *
+ *
+ * Ref:
+ * Level order traversal: https://www.youtube.com/watch?v=-YbXySKJsX8&ab_channel=takeUforward
+ * Pre order traversal: https://www.youtube.com/watch?v=u4JAi2JJhI8&ab_channel=NeetCode
+ *
+ */
+// Encodes a URL to a shortened URL.
+fun serialize(root: TreeNode?): String {
+    val queue = LinkedList<TreeNode?>().apply {
+        push(root)
+    }
+    var result = ""
+    while (queue.isNotEmpty()) {
+        val item = queue.pop()
+
+        result += "${(item?.`val` ?: "#")},"
+
+
+        if (item != null) {
+            queue.add(item.left)
+            queue.add(item.right)
+        }
+    }
+    return result
+}
+
+// Decodes your encoded data to tree.
+fun deserialize(data: String): TreeNode? {
+    if (data.isEmpty()) return null
+    val strs = data.split(",")
+    if (strs.isEmpty()) return null
+    if (strs.first() == "#") return null
+
+    val root = TreeNode(strs.first().toInt())
+    val queue = LinkedList<TreeNode?>().apply {
+        add(root)
+    }
+    var index = 1
+    while (queue.isNotEmpty()) {
+        val item = queue.pop()
+
+        var left = strs.getOrNull(index++) ?: "#"
+        if (left != "#") {
+            item?.left = TreeNode(left.toInt())
+            queue.add(item?.left)
+        } else {
+            item?.left = null
+        }
+
+        val right = strs.getOrNull(index++) ?: "#"
+        if (right != "#") {
+            item?.right = TreeNode(right.toInt())
+            queue.add(item?.right)
+        } else {
+            item?.right = null
+        }
+    }
+    return root
+}
+
+
+/**
+ * Problem: https://leetcode.com/problems/kth-smallest-element-in-a-bst/submissions/1273896667/
+ *
+ * Approach: Inorder traversal in BST is always sorted, so just count the node in inroder traversal and save kth value
+ *
+ * Ref: https://www.youtube.com/watch?v=9TJYWh0adfk&t=317s&ab_channel=takeUforward
+ */
+fun kthSmallest(root: TreeNode?, k: Int): Int {
+    val ans = IntArray(size = 1)
+    val counter = intArrayOf(0)
+    kthSmallestHelper(root, counter, ans, k)
+    return ans.get(0)
+}
+
+fun kthSmallestHelper(root: TreeNode?, counter: IntArray, ans: IntArray, k: Int) {
+    if (root == null) return
+    // Inorder traversal
+    kthSmallestHelper(root.left, counter, ans, k)
+    // increase the counter and check if this is the ans
+    counter[0] = counter[0] + 1
+    if (counter[0] == k) {
+        ans[0] = root.`val`
+    }
+    kthSmallestHelper(root.right, counter, ans, k)
+}
+
+
+/**
+ *  Problem: https://leetcode.com/problems/validate-binary-search-tree/description/
+ *  Approach:
+ *  1. Define a range of each node and cheeck if node falls in that range and so its left and right sub tree
+ *  2. Do it recursive
+ *  Note: Initial value for node is MAX and MIN, We took Long here to avoid Int max edge case
+ *
+ *
+ *  Ref:https://www.youtube.com/watch?v=f-sj7I5oXEI&list=PLkjdNRgDmcc0Pom5erUBU4ZayeU9AyRRu&index=46&ab_channel=takeUforward
+ */
+fun isValidBST(root: TreeNode?): Boolean {
+    return isValidBSTHelper(root, Long.MIN_VALUE, Long.MAX_VALUE)
+}
+
+fun isValidBSTHelper(root: TreeNode?, min: Long, max: Long): Boolean {
+    if (root == null) return true
+
+    return root.`val` in (min + 1) until max
+            && isValidBSTHelper(root.left, min = min, max = root.`val`.toLong())
+            && isValidBSTHelper(root.right, min = root.`val`.toLong(), max = max)
+}
+
+/**
+ * Problem: https://leetcode.com/problems/subtree-of-another-tree/description/
+ *
+ * Approach:
+ *  T is sub tree of S if
+ *   1. T == S
+ *   2. T is equal to left or right sub tree of S
+ * - Recursive
+ *
+ */
+fun isSubtree(root: TreeNode?, subRoot: TreeNode?): Boolean {
+
+    if (root == null) return false
+
+    if (isSameTree(root, subRoot)) return true
+
+    return isSubtree(root.left, subRoot) || isSubtree(root.right, subRoot)
+}
+
 
 fun main() {
-    val l1 = ListNode(1)
-    l1.next = ListNode(3)
-    l1.next?.next = ListNode(2)
-    l1.next?.next?.next = ListNode(4)
-    l1.next?.next?.next?.next = ListNode(5)
+    val root = TreeNode(2147483647)
+    /* root.left = TreeNode(1)
+     root.right = TreeNode(4)
+     root.right?.left = TreeNode(3)
+     root.left?.right = TreeNode(6)*/
 
 
-    print(hasCycle(l1))
+    //val sr = serialize(root)
+    print(isValidBST(root))
 }
 
 
